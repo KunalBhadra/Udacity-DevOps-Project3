@@ -17,6 +17,7 @@ jobs:
           command: |
             cd frontend
             npm install
+            npm install -g typescript
             npm run build
           #  exit 1
       - save_cache:
@@ -33,7 +34,6 @@ jobs:
       - run:
           name: Back-end build
           command: |
-            npm install -g typescript
             tsc /backend/src/main.ts
             #  exit 1
       - save_cache:
@@ -46,4 +46,6 @@ workflows:
   default:
     jobs:
       - build-frontend
-      - build-backend
+      - build-backend:
+          requires:
+            - build-frontend

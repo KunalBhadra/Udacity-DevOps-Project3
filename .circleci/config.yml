@@ -33,7 +33,8 @@ jobs:
       - run:
           name: Back-end build
           command: |
-            /backend/src/main.ts
+            npm install -g typescript
+            tsc /backend/src/main.ts
             #  exit 1
       - save_cache:
           paths: [backend/node_modules]

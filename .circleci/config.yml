@@ -33,7 +33,7 @@ jobs:
       - run:
           name: Back-end build
           command: |
-            tsc /backend/src/main.ts
+            /backend/src/main.ts
             #  exit 1
       - save_cache:
           paths: [backend/node_modules]

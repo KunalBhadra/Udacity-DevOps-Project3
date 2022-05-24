@@ -109,9 +109,10 @@ jobs:
 
   deploy-infrastructure:
     docker: 
-      - image:  amazon/aws-cli
+      - image: amazon/aws-cli
     steps:
       - checkout
+      - run: yum install -y tar gzip
       - run:
           name: Ensure back-end infrastructure exists
           command: |
@@ -134,12 +135,12 @@ jobs:
             aws ec2 describe-instances \
             --query 'Reservations[*].Intance[*].PublicIpAddress' \
             --output text >> .circleci/ansible/inventory.txt
-
       - persist_to_workspace:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
       - destroy_environment
+
   configure-infrastructure:
     docker:
       - image:  python:3.7-alpine3.11

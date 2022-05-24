@@ -133,13 +133,37 @@ jobs:
           command: |
             aws ec2 describe-instance \
             --query 'Reservations[*].Intance[*].PublicIpAddress' \
-            --output test >> .circleci/ansible/inventory.txt
+            --output text >> .circleci/ansible/inventory.txt
 
       - persist_to_workspace:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
       - destroy_environment
+  configure-infrastructure:
+    docker:
+      - image:  python:3.7-alpine3.11
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints: ["52:31:1d:81:a4:32:78:13:f6:6c:56:22:92:2f:96:8f"]
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - project/.circleci/ansible/inventory.txt
+      # attach workspace
+      - run:
+          name: Install dependencies
+          command: |
+            # Your code here
+            exit 1
+      - run:
+          name: Configure server
+          command: |
+            # Your code here
+            exit 1
+      # Here's where you will add some code to rollback on failure
+    
       
               
 # Invoke jobs via workflows

@@ -152,21 +152,17 @@ jobs:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
-      # attach workspace
       - run:
           name: Install dependencies
           command: |
-            # Your code here
-            exit 1
+            apk add --update ansible
       - run:
           name: Configure server
           command: |
-            # Your code here
-            exit 1
-      # Here's where you will add some code to rollback on failure
+            cd .circleci/ansible
+            ansible-playbook -i inventory.txt configure-server.yml
+      - destroy_environment
     
-      
-              
 # Invoke jobs via workflows
 workflows:
   default:

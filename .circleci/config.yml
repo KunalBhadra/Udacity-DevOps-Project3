@@ -226,6 +226,25 @@ jobs:
             tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
             aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
       #- destroy_environment
+
+  deploy-backend:
+    docker: 
+      - image: python:3.7-alpine3.11
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints: [52:31:1d:81:a4:32:78:13:f6:6c:56:22:92:2f:96:8f]
+      
+      # attach workspace
+      - run:
+          name: Install dependencies
+          command: |
+            # your code here
+      - run:
+          name: Deploy backend
+          command: |
+            # your code here
+      # Here's where you will add some code to rollback on failure
 # Invoke jobs via workflows
 workflows:
   default:

@@ -223,6 +223,7 @@ jobs:
 
             cd backend
             npm cache clean --force
+            rm -rf node_modules
             npm install
             # npm audit fix --audit-level=critical --force
             # sudo npm run build

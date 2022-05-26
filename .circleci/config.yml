@@ -223,7 +223,7 @@ jobs:
 
             cd backend
             npm cache clean --force
-            rm -rf node_modules
+            rm -rf node_modules && rm ./package-lock.json && npm install
             npm install
             # npm audit fix --audit-level=critical --force
             # sudo npm run build

@@ -18,12 +18,12 @@ commands:
           # Add when this will run
           command: |
             # Curl command here to see if there was a successful migration associated with the workflow id, store result in SUCCESS variable
-            SUCCESS = 1
+            export SUCCESS=$(curl -H "token: 7933fe63-4687-4fa1-8426-aa25aa1730ec" --request GET https://api.memstash.io/values/migration_${CIRCLE_WORKFLOW_ID})
             if(( $SUCCESS==1 )); 
             then
               cd ~/project/backend
               npm install
-              Add revert code here. You can find this in the Getting Started section.
+              npm run migrations:revert
             fi
 
 # Define a job to be invoked later in a workflow.
@@ -141,7 +141,7 @@ jobs:
           command: |
             aws cloudformation deploy \
               --template-file .circleci/files/frontend.yml \
-              --tags project=udaple \
+              --tags project=udapeople \
               --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"  
       - run:
@@ -150,6 +150,7 @@ jobs:
             aws ec2 describe-instances \
             --query 'Reservations[*].Intance[*].PublicIpAddress' \
             --output text >> .circleci/ansible/inventory.txt
+            cat .circleci/ansible/inventory.txt
       - persist_to_workspace:
           root: ~/
           paths:
@@ -171,11 +172,26 @@ jobs:
           name: Install dependencies
           command: |
             apk add --update ansible
+            cat .circleci/ansible/inventory.txt
       - run:
           name: Configure server
           command: |
+            echo ENVIRONMENT=production > "backend/.env"
+            echo TYPEORM_CONNECTION=postgres >> "backend/.env"
+            echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> "backend/.env"
+            echo TYPEORM_MIGRATIONS=./src/migrations/*.ts >> "backend/.env"
+            echo TYPEORM_MIGRATIONS_DIR=./src/migrations >> "backend/.env"
+            echo NODE_ENV=production >> "backend/.env"
+            echo TYPEORM_HOST=$TYPEORM_HOST >> "backend/.env"
+            echo TYPEORM_PORT=$TYPEORM_PORT >> "backend/.env"
+            echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> "backend/.env"
+            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> "backend/.env"
+            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "backend/.env"
+
             cd .circleci/ansible
-            ansible-playbook -i inventory.txt configure-server.yml
+            ansible-playbook \
+              -i .circleci/ansible/inventory.txt \
+              .circleci/ansible/configure-server.yml
       - destroy_environment
   
   run-migrations:
@@ -186,31 +202,56 @@ jobs:
       - run:
           name: Run migrations
           command: |
+            echo ENVIRONMENT=production > "backend/.env"
+            echo TYPEORM_CONNECTION=postgres >> "backend/.env"
+            echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> "backend/.env"
+            echo TYPEORM_MIGRATIONS=./src/migrations/*.ts >> "backend/.env"
+            echo TYPEORM_MIGRATIONS_DIR=./src/migrations >> "backend/.env"
+            echo NODE_ENV=production >> "backend/.env"
+            echo TYPEORM_HOST=$TYPEORM_HOST >> "backend/.env"
+            echo TYPEORM_PORT=$TYPEORM_PORT >> "backend/.env"
+            echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> "backend/.env"
+            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> "backend/.env"
+            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "backend/.env"
+            # ---
             cd backend
             npm install
             npm run migrations > migrations_dump.txt
+            cat migrations_dump.txt
+            migration_status=$(cat migrations_dump.txt | grep -c "has been executed successfully")
+            if [ $migration_status > 0 ]; 
+            then 
+              exit 0; 
+            else 
+              exit 1; 
+            fi;           
       - run:
           name: Send migration results to memstash
           command: |
             if grep -q "has been executed successfully." ~/project/backend/migrations_dump.txt
             then
-              # If you are using memstash.io, generate the token "7933fe63-4687-4fa1-8426-aa25aa1730ec" on the website
               curl -H "Content-Type: text/plain" -H "token: 7933fe63-4687-4fa1-8426-aa25aa1730ec" --request PUT --data "1" https://api.memstash.io/values/migration_${CIRCLE_WORKFLOW_ID:0:7}
-              # If you are using kvdb.io, generate the bucket ID "9GE4jRtKznmVKRfvdBABBe" in your local terminal first
               curl https://kvdb.io/W6qbUsn4Q9pZFyEfBpM2sB/migration_${CIRCLE_WORKFLOW_ID:0:7}  -d '1'
-            fi
+            fi          
       - revert-migrations
+      - destroy_environment
   
   deploy-frontend:
     docker:
       - image:  amazon/aws-cli
     steps:
       - checkout
-      - run:  yum install -y tar gzip
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: Install dependencies
+          command: |
+            cd frontend
+            npm install
       - run:
           name: Get backend url
           command: |
-            export BACKEND_IP=$(aws ec2 describe-instances --query 'Reservations[*].Intance[*].PublicIpAddress' --output text)
+            export BACKEND_IP=$(sed -n 2p .circleci/ansible/inventory.txt)
             export API_URL="http://${BACKEND_IP}:3030"
             echo "${API_URL}"
             echo API_URL="http://${BACKEND_IP}:3030" >> frontend/.env
@@ -222,8 +263,9 @@ jobs:
             npm install
             npm run build
             tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
-            aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
-      #- destroy_environment
+            aws s3 cp dist s3://udapeople-kb1j287dhjppmz789 --recursive
+      - revert-migrations
+      - destroy-environment
 
   deploy-backend:
     docker: 
@@ -231,17 +273,13 @@ jobs:
     steps:
       - checkout
       - add_ssh_keys:
-          fingerprints: [52:31:1d:81:a4:32:78:13:f6:6c:56:22:92:2f:96:8f]
-      - persist_to_workspace:
-          root: ~/
-          paths:
-            - project/.circleci/ansible/inventory.txt
+          fingerprints: ["52:31:1d:81:a4:32:78:13:f6:6c:56:22:92:2f:96:8f"]
+      - attach_workspace:
+          at: ~/
       - run:
           name: Install dependencies
           command: |
-            npm install
-            apk add --update ansible
-            yum install -y tar gzip
+            apk add --update ansible openssh-client tar gzip
       - run:
           name: Deploy backend
           command: |
@@ -254,8 +292,10 @@ jobs:
             cd .circleci/ansible
             echo "Contents  of the inventory.txt file is -------"
             cat inventory.txt
-            ansible-playbook -i inventory.txt deploy-backend.yml
-      # - destroy-environment
+            ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml
+      - revert-migrations
+      - destroy-environment
+
 # Invoke jobs via workflows
 workflows:
   default:

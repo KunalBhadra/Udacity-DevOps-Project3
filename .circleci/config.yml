@@ -175,7 +175,7 @@ jobs:
       - run:
           name: Configure server
           command: |
-            environment:
+          
             - TYPEORM_CONNECTION: "{{ lookup('env', 'TYPEORM_CONNECTION')}}"
             - TYPEORM_ENTITIES: "{{ lookup('env', 'TYPEORM_ENTITIES')}}"
             - TYPEORM_HOST: "{{ lookup('env', 'TYPEORM_HOST')}}"
@@ -187,9 +187,7 @@ jobs:
             - TYPEORM_MIGRATIONS_DIR: "{{ lookup('env', 'TYPEORM_MIGRATIONS_DIR')}}"
 
             cd .circleci/ansible
-            ansible-playbook \
-            -i .circleci/ansible/inventory.txt \
-            .circleci/ansible/configure-server.yml
+            ansible-playbook -i .circleci/ansible/inventory.txt circleci/ansible/configure-server.yml
       - run:
           name: Install AWS CLI for rollback
           when: on_fail

@@ -199,26 +199,20 @@ jobs:
       - attach_workspace:
           at: ~/
       - run:
-          name: Install AWS CLI dependencies
+          name: Install dependencies
           command: |
             cd backend    
             npm install
-            npm run build   
-            sudo apt-get update && sudo apt-get install -yy less
-            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-            unzip awscliv2.zip
-            sudo ./aws/install
       - run:
           name: Run migrations
           working_directory: ./backend
           command: |
-            npm run migrations > migration_dump.txt
-            migration_status=$(cat migrations_dump.txt | grep -c "has been executed successfully")
-            if [ $migration_status > 0 ]; then exit 0; else exit 1; fi;         
+            npm run migrations > migration_dump.txt     
       - run:
           name: Send migration results to memstash
           working_directory: ./backend
           command: |
+            if grep -q "has been executed successfully" migration_dump.txt
             then
               echo "DB migration was successful, will update memstash..."
               curl -H "Content-Type: text/plain" -H "token: 7933fe63-4687-4fa1-8426-aa25aa1730ec" --request PUT --data "success" https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7}

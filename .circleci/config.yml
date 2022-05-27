@@ -200,7 +200,8 @@ jobs:
           at: ~/
       - run:
           name: Install AWS CLI dependencies
-          command: |    
+          command: |
+            cd backend    
             npm install
             npm run build   
             sudo apt-get update && sudo apt-get install -yy less

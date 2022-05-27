@@ -200,7 +200,6 @@ jobs:
           at: ~/
       - run:
           name: Install AWS CLI dependencies
-          working_directory: /tmp
           command: |    
             npm install
             npm run build   

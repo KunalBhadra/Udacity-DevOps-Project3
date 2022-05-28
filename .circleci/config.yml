@@ -206,7 +206,7 @@ workflows:
             branches:
               only: [ master ]
       - configure-infrastructure:
-          requires: [deploy-infrastructure]
+          requires: [deploy_backend_infrastructure]
       - run_db_migrations_for_backend:
           requires:
             - deploy_backend_infrastructure

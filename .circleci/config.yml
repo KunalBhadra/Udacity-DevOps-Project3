@@ -30,7 +30,7 @@ commands:
           command: |
             curl -fsSL https://deb.nodesource.com/setup_13.x | sudo -E bash -
             sudo apt install -y nodejs
-            
+
   destroy-environment:
     description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
     parameters:
@@ -286,30 +286,17 @@ jobs:
             cd backend
             npm install
       - run:
-          name: Upzip the Backend code
-          command: |
-              cd /home/circleci/project
-              echo    ENVIRONMENT=production                                 > "backend/.env"
-              echo    TYPEORM_CONNECTION=postgres                            >> "backend/.env"
-              echo    TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts   >> "backend/.env"
-              echo    TYPEORM_MIGRATIONS=./src/migrations/*.ts               >> "backend/.env"
-              echo    TYPEORM_MIGRATIONS_DIR=./src/migrations                >> "backend/.env"
-              echo    NODE_ENV=production                                    >> "backend/.env"
-              echo    TYPEORM_HOST=$TYPEORM_HOST                             >> "backend/.env"
-              echo    TYPEORM_PORT=$TYPEORM_PORT                             >> "backend/.env"
-              echo    TYPEORM_USERNAME=$TYPEORM_USERNAME                     >> "backend/.env"
-              echo    TYPEORM_PASSWORD=$TYPEORM_PASSWORD                     >> "backend/.env"
-              echo    TYPEORM_DATABASE=$TYPEORM_DATABASE                     >> "backend/.env"
-              echo
-              cat backend/.env
-              echo
-              tar czf backend.tar.gz -P backend
-              sudo cp backend.tar.gz /home
-      - run:
           name: Deploy backend
           command: |
-              export ANSIBLE_HOST_KEY_CHECKING=False
+              cd backend
+              npm i
+              npm run build
+              cd ..
+              # Zip the directory
+              tar -C backend -czvf artifact.tar.gz .
               cd .circleci/ansible
+              echo "Contents  of the inventory.txt file is -------"
+              cat inventory.txt
               ansible-playbook -i inventory.txt deploy-backend.yml
       - destroy-environment
       - revert-migrations

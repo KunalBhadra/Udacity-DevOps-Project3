@@ -271,7 +271,7 @@ jobs:
       - install_ansible
       - install_nodejs
       - add_ssh_keys:
-          fingerprints: ["29:85:78:05:67:d7:3c:7f:5c:34:e6:21:ca:e8:64:ff"]
+          fingerprints: ["82:4b:24:09:e0:c5:43:f2:76:4b:b1:24:55:cb:a0:02"]
       - attach_workspace:
           at: ~/
       - restore_cache:
@@ -362,3 +362,5 @@ workflows:
           requires: [run-migrations]
       - deploy-backend:
           requires: [run-migrations]
+      - smoke-test:
+          requires: [deploy-backend, deploy-frontend]

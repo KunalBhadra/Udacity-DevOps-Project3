@@ -265,46 +265,53 @@ jobs:
             aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
       - destroy-environment
       - revert-migrations
-      
+
   deploy-backend:
     docker:
-      - image: cimg/base:stable
+      - image: python:3.7-alpine3.11
+    # Make sure ubuntu is 20.04 in backend.yml or you will have issues with PM2. read .circleci/backend/files for more info
     steps:
       - checkout
       - install_awscli
-      - install_ansible
-      - install_nodejs
       - add_ssh_keys:
           fingerprints: ["82:4b:24:09:e0:c5:43:f2:76:4b:b1:24:55:cb:a0:02"]
       - attach_workspace:
           at: ~/
-      - restore_cache:
-          keys: [backend-deps]
       - run:
           name: Install dependencies
           command: |
-            cd backend
-            npm install
+            apk add --update ansible
+            apk add --update tar gzip nodejs npm
+            apk add --update openssh-client
       - run:
-          name: Package Backend
+          name: Compress Backend
           command: |
-            cd backend
-            npm run build
-            tar -czf artifact.tar.gz dist/* package*
-            cd ..
-            cp backend/artifact.tar.gz .circleci/ansible/roles/deploy/files
+            [[ ! -d backend ]] && mkdir backend
+            env="backend/.env"
+            echo ENVIROMENT=production > $env
+            echo NODE_ENV=production >> $env
+            echo TYPEORM_CONNECTION=postgres >> $env
+            echo TYPEORM_MIGRATIONS_DIR=./src/migrations >> $env
+            echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> $env
+            echo TYPEORM_MIGRATIONS=./src/migrations/*.ts >> $env
+            echo TYPEORM_HOST=$TYPEORM_HOST >> $env
+            echo TYPEORM_PORT=$TYPEORM_PORT >> $env
+            echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> $env
+            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> $env
+            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> $env
+            cat $env
+            tar -C backend -czvf artifact.tar.gz .
+            ls -la
       - run:
           name: Deploy backend
           command: |
-            export TYPEORM_MIGRATIONS_DIR=./migrations
-            export TYPEORM_ENTITIES=./modules/domain/**/*.entity{.ts,.js}
-            export TYPEORM_MIGRATIONS=./migrations/*.ts
-            cd .circleci/ansible
-            cat inventory.txt
-            ansible-playbook -i inventory.txt deploy-backend.yml
-      - destroy-environment
+            ANSIBLE_HOST_KEY_CHECKING=False
+            pwd
+            cat .circleci/ansible/inventory.txt
+            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml
       - revert-migrations
-
+      - destroy-environment    
+  
   smoke-test:
     docker:
       - image: cimg/base:stable

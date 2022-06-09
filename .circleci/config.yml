@@ -273,6 +273,8 @@ jobs:
     steps:
       - checkout
       - install_awscli
+      - install_ansible
+      - install_nodejs
       - add_ssh_keys:
           fingerprints: ["82:4b:24:09:e0:c5:43:f2:76:4b:b1:24:55:cb:a0:02"]
       - attach_workspace:
@@ -280,9 +282,8 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            apk add --update ansible
-            apk add --update tar gzip nodejs npm
-            apk add --update openssh-client
+            cd backend
+            npm install
       - run:
           name: Compress Backend
           command: |

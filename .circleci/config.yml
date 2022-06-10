@@ -272,49 +272,44 @@ jobs:
     steps:
       - checkout
       - add_ssh_keys:
-            fingerprints:
-                ['82:4b:24:09:e0:c5:43:f2:76:4b:b1:24:55:cb:a0:02']
+          fingerprints: ["82:4b:24:09:e0:c5:43:f2:76:4b:b1:24:55:cb:a0:02"]
       - attach_workspace:
-            at: ~/
-      - restore_cache:
-            keys: ['backend']
+          at: ~/
       - run:
-            name: Install dependencies
-            command: |
-                apk add --update ansible openssh-client tar gzip
-                apk add curl
+          name: Install dependencies
+          command: |
+            # install the dependencies needed for your playbook
+            apk add --update openssh-client
+            apk add --update tar gzip ansible nodejs npm curl
+            apk update pip3
+            pip3 install awscli
       - run:
-            name: Upzip the Backend code
-            command: |
-                cd /home/circleci/project
-                echo    ENVIRONMENT=production                                 > "backend/.env"
-                echo    TYPEORM_CONNECTION=postgres                            >> "backend/.env"
-                echo    TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts   >> "backend/.env"
-                echo    TYPEORM_MIGRATIONS=./src/migrations/*.ts               >> "backend/.env"
-                echo    TYPEORM_MIGRATIONS_DIR=./src/migrations                >> "backend/.env"
-                echo    NODE_ENV=production                                    >> "backend/.env"
-                echo    TYPEORM_HOST=$TYPEORM_HOST                             >> "backend/.env"
-                echo    TYPEORM_PORT=$TYPEORM_PORT                             >> "backend/.env"
-                echo    TYPEORM_USERNAME=$TYPEORM_USERNAME                     >> "backend/.env"
-                echo    TYPEORM_PASSWORD=$TYPEORM_PASSWORD                     >> "backend/.env"
-                echo    TYPEORM_DATABASE=$TYPEORM_DATABASE                     >> "backend/.env"
-                echo
-                cat backend/.env
-                echo
-                tar czf backend.tar.gz -P backend
-                cp backend.tar.gz /home
-      - run:
-            name: Deploy backend
-            command: |
-                export ANSIBLE_HOST_KEY_CHECKING=False
-                ansible-playbook \
-                  -i .circleci/ansible/inventory.txt \
-                  .circleci/ansible/deploy-backend.yml
-      - run:
-            name: Install AWS CLI for rollback
-            when: on_fail
-            command: |
-                apk add --update py3-pip && pip3 install --upgrade pip && pip3 install awscli
+          name: taring the backend file
+          command: |
+            touch .myenv
+            echo ENVIROMENT=production > .myenv
+            echo NODE_ENV=production >> .myenv
+            echo TYPEORM_CONNECTION=$TYPEORM_CONNECTION >> .myenv
+            echo TYPEORM_MIGRATIONS_DIR=./src/migrations >> .myenv
+            echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> .myenv
+            echo TYPEORM_MIGRATIONS=./src/migrations/*.ts >> .myenv
+            echo TYPEORM_HOST=$TYPEORM_HOST >> .myenv
+            echo TYPEORM_PORT=$TYPEORM_PORT >> .myenv
+            echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> .myenv
+            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> .myenv
+            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> .myenv
+            ls -lart
+            cat .myenv
+            mv .myenv backend
+            tar -C backend -czvf artifact.tar.gz .
+      - store_artifacts:
+          path: ~/project/artifact.tar.gz
+      - run:  
+          name: invoke ansible script
+          command: |
+            cd .circleci/ansible
+            cat ~/project/.circleci/ansible/inventory.txt
+            ansible-playbook -i ~/project/.circleci/ansible/inventory.txt deploy-backend.yml       
       - destroy-environment
       - revert-migrations
   
@@ -384,4 +379,4 @@ workflows:
       - smoke-test:
           requires: [deploy-backend, deploy-frontend]
 
-          
+

@@ -19,31 +19,31 @@
     production: yes
     state: present
 
-- name: Copy backend files
-  become: true
-  copy:
-      src: /home/backend.tar.gz
-      dest: /home/ubuntu/backend.tar.gz
+- name: Creates directory
+  file:
+    path: ~/backend
+    state: directory
+    mode: 0755
 
-- name: Unzip
+- name: Extract artifact.tar.gz into ~/backend
+  ansible.builtin.unarchive:
+    src: ~/project/artifact.tar.gz
+    dest: ~/backend
+
+- name: install npm & switch to 13.8.0 to build
+  become: true
   shell: |
-      cd /home/ubuntu/
-      tar xzvf backend.tar.gz
-
-- name: "install npm packages"
-  become: true
-  command: npm install
-  args:
-    chdir: /home/ubuntu/backend/node_modules
-
-- name: "compile npm packages"
-  become: true
-  command: npm run build
-  args:
-    chdir: /home/ubuntu/backend/node_modules
-
-- name: Start PM2
+    cd /home/ubuntu/backend
+    npm install -g n
+    n 13.8.0
+    chown -R ubuntu:ubuntu /home/ubuntu/backend
+- name: build
   shell: |
-      cd /home/ubuntu/backend
-      sudo pm2 start npm --name backend -- start
-
+    cd /home/ubuntu/backend
+    npm install
+    npm run build
+    
+- name: start pm2
+  shell: |
+    cd /home/ubuntu/backend    
+    pm2 start npm --name backend -- start

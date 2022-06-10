@@ -282,6 +282,8 @@ jobs:
             name: Install dependencies
             command: |
                 apk add --update ansible openssh-client tar gzip
+                apt-get update
+                apt-get install curl
       - run:
             name: Upzip the Backend code
             command: |

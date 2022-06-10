@@ -272,37 +272,48 @@ jobs:
     steps:
       - checkout
       - add_ssh_keys:
-            fingerprints: ["82:4b:24:09:e0:c5:43:f2:76:4b:b1:24:55:cb:a0:02"]
+            fingerprints:
+                ['82:4b:24:09:e0:c5:43:f2:76:4b:b1:24:55:cb:a0:02']
       - attach_workspace:
             at: ~/
+      - restore_cache:
+            keys: ['backend']
       - run:
-          name: Install dependencies
-          command: |
-            apk update
-            apk upgrade
-            apk add unzip
-            apk add curl
-            apk add --update ansible
-            apk add --update nodejs npm
-            /usr/local/bin/python -m pip install --upgrade pip
-            pip install awscli
+            name: Install dependencies
+            command: |
+                apk add --update ansible openssh-client tar gzip
       - run:
-          name: Deploy backend
-          command: |
-            # your code here
-            cd backend
-            npm i
-            npm run build
-            cp package* ./dist
-            cd ..
-            # Zip the directory
-            tar -C backend -czvf artifact.tar.gz .
-            pwd
-            ls
-            cd .circleci/ansible
-            echo "Contents  of the inventory.txt file is -------"
-            cat inventory.txt
-            ansible-playbook -i inventory.txt deploy-backend.yml
+            name: Upzip the Backend code
+            command: |
+                cd /home/circleci/project
+                echo    ENVIRONMENT=production                                 > "backend/.env"
+                echo    TYPEORM_CONNECTION=postgres                            >> "backend/.env"
+                echo    TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts   >> "backend/.env"
+                echo    TYPEORM_MIGRATIONS=./src/migrations/*.ts               >> "backend/.env"
+                echo    TYPEORM_MIGRATIONS_DIR=./src/migrations                >> "backend/.env"
+                echo    NODE_ENV=production                                    >> "backend/.env"
+                echo    TYPEORM_HOST=$TYPEORM_HOST                             >> "backend/.env"
+                echo    TYPEORM_PORT=$TYPEORM_PORT                             >> "backend/.env"
+                echo    TYPEORM_USERNAME=$TYPEORM_USERNAME                     >> "backend/.env"
+                echo    TYPEORM_PASSWORD=$TYPEORM_PASSWORD                     >> "backend/.env"
+                echo    TYPEORM_DATABASE=$TYPEORM_DATABASE                     >> "backend/.env"
+                echo
+                cat backend/.env
+                echo
+                tar czf backend.tar.gz -P backend
+                cp backend.tar.gz /home
+      - run:
+            name: Deploy backend
+            command: |
+                export ANSIBLE_HOST_KEY_CHECKING=False
+                ansible-playbook \
+                  -i .circleci/ansible/inventory.txt \
+                  .circleci/ansible/deploy-backend.yml
+      - run:
+            name: Install AWS CLI for rollback
+            when: on_fail
+            command: |
+                apk add --update py3-pip && pip3 install --upgrade pip && pip3 install awscli
       - destroy-environment
       - revert-migrations
   

@@ -25,9 +25,25 @@
       src: /home/backend.tar.gz
       dest: /home/ubuntu/backend.tar.gz
 
-- name: Start PM2
+- name: Unzip
   shell: |
       cd /home/ubuntu/
       tar xzvf backend.tar.gz
-      cd backend
+
+- name: "install npm packages"
+  become: true
+  command: npm install
+  args:
+    chdir: /home/ubuntu/backend/node_modules
+
+- name: "compile npm packages"
+  become: true
+  command: npm run build
+  args:
+    chdir: /home/ubuntu/backend/node_modules
+
+- name: Start PM2
+  shell: |
+      cd /home/ubuntu/backend
       sudo pm2 start npm --name backend -- start
+
